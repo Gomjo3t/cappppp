@@ -112,6 +112,149 @@ class _MyGoalPageState extends State<MyGoalPage> {
     );
   }
 
+  void _showAddGoalDialog() {
+    final TextEditingController labelController = TextEditingController();
+    final TextEditingController dueDateController = TextEditingController();
+    bool isHealth = true;
+    bool includeProgress = false;
+    double progressValue = 0.0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Add New Goal'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Goal Category'),
+                    const SizedBox(height: 6),
+                    DropdownButton<bool>(
+                      value: isHealth,
+                      isExpanded: true,
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setStateDialog(() {
+                          isHealth = value;
+                        });
+                      },
+                      items: const [
+                        DropdownMenuItem(
+                          value: true,
+                          child: Text('Health Goal'),
+                        ),
+                        DropdownMenuItem(
+                          value: false,
+                          child: Text('Personal Goal'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: labelController,
+                      decoration: const InputDecoration(
+                        labelText: 'Goal description',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Track progress'),
+                      value: includeProgress,
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          includeProgress = value;
+                        });
+                      },
+                    ),
+                    if (includeProgress) ...[
+                      const SizedBox(height: 8),
+                      Slider(
+                        value: progressValue,
+                        divisions: 20,
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            progressValue = value;
+                          });
+                        },
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Progress: ${(progressValue * 100).round()}%',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: dueDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Due date (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final label = labelController.text.trim();
+                    if (label.isEmpty) {
+                      return;
+                    }
+
+                    final newGoal = <String, dynamic>{
+                      'label': label,
+                      'icon': isHealth
+                          ? Icons.flag.codePoint
+                          : Icons.emoji_events.codePoint,
+                      'done': false,
+                    };
+
+                    final due = dueDateController.text.trim();
+                    if (due.isNotEmpty) {
+                      newGoal['due'] = due;
+                    }
+
+                    if (includeProgress) {
+                      newGoal['progress'] = progressValue;
+                    }
+
+                    setState(() {
+                      if (isHealth) {
+                        healthGoals.add(newGoal);
+                      } else {
+                        personalGoals.add(newGoal);
+                      }
+                    });
+
+                    _saveGoals();
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Add Goal'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      labelController.dispose();
+      dueDateController.dispose();
+    });
+  }
+
   Widget _buildGoalTile(Map<String, dynamic> goal, bool isHealth, int index) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
@@ -241,9 +384,7 @@ class _MyGoalPageState extends State<MyGoalPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.pink,
         child: const Icon(Icons.add, size: 30),
-        onPressed: () {
-          // TODO: Add functionality to create custom goals
-        },
+        onPressed: _showAddGoalDialog,
       ),
     );
   }
